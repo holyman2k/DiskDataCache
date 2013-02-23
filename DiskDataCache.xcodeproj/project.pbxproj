@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		6F3ED3A616D979B700FAE57B /* DiskDataCache.m in Sources */ = {isa = PBXBuildFile; fileRef = 6F3ED3A516D979B700FAE57B /* DiskDataCache.m */; };
 		6FC7D2E516D96F4E00BFFB05 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6FC7D2E416D96F4E00BFFB05 /* UIKit.framework */; };
 		6FC7D2E716D96F4E00BFFB05 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6FC7D2E616D96F4E00BFFB05 /* Foundation.framework */; };
 		6FC7D2E916D96F4E00BFFB05 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 6FC7D2E816D96F4E00BFFB05 /* CoreGraphics.framework */; };
@@ -15,10 +16,11 @@
 		6FC7D2F716D96F4E00BFFB05 /* Default.png in Resources */ = {isa = PBXBuildFile; fileRef = 6FC7D2F616D96F4E00BFFB05 /* Default.png */; };
 		6FC7D2F916D96F4E00BFFB05 /* Default@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 6FC7D2F816D96F4E00BFFB05 /* Default@2x.png */; };
 		6FC7D2FB16D96F4E00BFFB05 /* Default-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 6FC7D2FA16D96F4E00BFFB05 /* Default-568h@2x.png */; };
-		6FC7D30316D96F6400BFFB05 /* DiskDataCache.m in Sources */ = {isa = PBXBuildFile; fileRef = 6FC7D30216D96F6400BFFB05 /* DiskDataCache.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		6F3ED3A416D979B700FAE57B /* DiskDataCache.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DiskDataCache.h; path = classes/DiskDataCache.h; sourceTree = "<group>"; };
+		6F3ED3A516D979B700FAE57B /* DiskDataCache.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = DiskDataCache.m; path = classes/DiskDataCache.m; sourceTree = "<group>"; };
 		6FC7D2E116D96F4E00BFFB05 /* DiskDataCache.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DiskDataCache.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		6FC7D2E416D96F4E00BFFB05 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		6FC7D2E616D96F4E00BFFB05 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -32,8 +34,6 @@
 		6FC7D2F616D96F4E00BFFB05 /* Default.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Default.png; sourceTree = "<group>"; };
 		6FC7D2F816D96F4E00BFFB05 /* Default@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default@2x.png"; sourceTree = "<group>"; };
 		6FC7D2FA16D96F4E00BFFB05 /* Default-568h@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "Default-568h@2x.png"; sourceTree = "<group>"; };
-		6FC7D30116D96F6400BFFB05 /* DiskDataCache.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DiskDataCache.h; sourceTree = "<group>"; };
-		6FC7D30216D96F6400BFFB05 /* DiskDataCache.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = DiskDataCache.m; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -80,10 +80,10 @@
 		6FC7D2EA16D96F4E00BFFB05 /* DiskDataCache */ = {
 			isa = PBXGroup;
 			children = (
-				6FC7D30116D96F6400BFFB05 /* DiskDataCache.h */,
-				6FC7D30216D96F6400BFFB05 /* DiskDataCache.m */,
 				6FC7D2F316D96F4E00BFFB05 /* AppDelegate.h */,
 				6FC7D2F416D96F4E00BFFB05 /* AppDelegate.m */,
+				6F3ED3A416D979B700FAE57B /* DiskDataCache.h */,
+				6F3ED3A516D979B700FAE57B /* DiskDataCache.m */,
 				6FC7D2EB16D96F4E00BFFB05 /* Supporting Files */,
 			);
 			path = DiskDataCache;
@@ -169,7 +169,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				6FC7D2F116D96F4E00BFFB05 /* main.m in Sources */,
-				6FC7D30316D96F6400BFFB05 /* DiskDataCache.m in Sources */,
+				6F3ED3A616D979B700FAE57B /* DiskDataCache.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
