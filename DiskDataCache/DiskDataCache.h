@@ -8,8 +8,9 @@
 
 #import <Foundation/Foundation.h>
 
-#define DefaultCacheCount 200
-#define DefaultCacheFolder @"diskCache"
+#define DefaultCacheSize 200 * 1024 * 1024 // 200mb cache
+//#define DefaultCacheSize 2 * 1024 * 1024
+#define DefaultCacheFolder @"DiskCache"
 
 @interface DiskDataCache : NSObject
 
@@ -20,5 +21,7 @@
 - (NSData *)dataForKey:(NSString *)key;
 
 - (void)setData:(NSData *)data forKey:(NSString *)key;
+
+- (void)clearCache;
 
 @end

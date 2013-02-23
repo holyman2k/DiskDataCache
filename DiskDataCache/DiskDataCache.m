@@ -8,11 +8,16 @@
 
 #import "DiskDataCache.h"
 
+#define CurrentCacheSizeStore @"CurrentCacheSize.txt"
+#define CacheMapStore @"CacheMap.plist"
+#define CacheKeysStore @"CacheKeys.plist"
+
 @interface DiskDataCache()
 @property (nonatomic) long maxCacheCount;
-@property (nonatomic) long currentCacheCount;
-@property (strong, atomic) NSMutableDictionary *cacheMap;
-@property (strong, atomic) NSMutableArray *cacheMapOrder;
+@property (nonatomic) long maxCacheSize;
+@property (nonatomic) long currentCacheSize;
+@property (strong, atomic) NSMutableDictionary *cachedMap;
+@property (strong, atomic) NSMutableArray *cachedArray;
 @property (strong, nonatomic) NSString *directory;
 @end
 
@@ -21,26 +26,27 @@
 static DiskDataCache *singleton = nil;
 
 @synthesize maxCacheCount = _maxCacheCount;
-@synthesize currentCacheCount = _currentCacheCount;
-@synthesize cacheMap = _cacheMap;
+@synthesize maxCacheSize = _maxCacheSize;
+@synthesize currentCacheSize = _currentCacheSize;
+@synthesize cachedMap = _cachedMap;
+@synthesize cachedArray = _cachedArray;
 @synthesize directory = _directory;
 
-- (void)setCurrentCacheCount:(long)currentCacheCount
+- (void)setCurrentCacheSize:(long)currentCacheSize
 {
-    _currentCacheCount = currentCacheCount;
-    NSString *size = [NSString stringWithFormat:@"%ld", currentCacheCount];
-    NSError *error;
-    [size writeToFile:[self filenameToPath:@"currentSize.txt"] atomically:YES encoding:NSUTF8StringEncoding error:&error];
+    NSLog(@"cache at %ld, max at %ld at %f%%", currentCacheSize, self.maxCacheSize, ((double)currentCacheSize/(double)self.maxCacheSize * 100));
+    _currentCacheSize = currentCacheSize;
+    NSString *size = [NSString stringWithFormat:@"%ld", currentCacheSize];
+    [size writeToFile:[self filenameToPath:CurrentCacheSizeStore] atomically:YES encoding:NSUTF8StringEncoding error:nil];
 }
 
-- (long)currentCacheCount
+- (long)currentCacheSize
 {
-    if (!_currentCacheCount){
-        NSError *error;
-        NSString *value = [NSString stringWithContentsOfFile:[self filenameToPath:@"currentSize.txt"] encoding:NSUTF8StringEncoding error:&error];
-        if (value) _currentCacheCount = [value longLongValue];
+    if (!_currentCacheSize){
+        NSString *value = [NSString stringWithContentsOfFile:[self filenameToPath:CurrentCacheSizeStore] encoding:NSUTF8StringEncoding error:nil];
+        if (value) _currentCacheSize = [value longLongValue];
     }
-    return _currentCacheCount;
+    return _currentCacheSize;
 }
 
 + (id) globalInstant
@@ -48,22 +54,23 @@ static DiskDataCache *singleton = nil;
     @synchronized(self)
     {
         if (singleton == nil)
-            singleton = [[self alloc] init];
+            singleton = [[self alloc] initWithDefaults];
     }
     
     return singleton;
 }
 
-- (id)init
+- (id)initWithDefaults
 {
     if (self = [super init])
     {
-        self.maxCacheCount = DefaultCacheCount;
+        self.maxCacheSize = DefaultCacheSize;
         self.directory = [[NSSearchPathForDirectoriesInDomains(NSCachesDirectory, NSUserDomainMask, YES) lastObject] stringByAppendingPathComponent:DefaultCacheFolder];
         NSFileManager *fileManager = [[NSFileManager alloc]init];
-        [fileManager createDirectoryAtPath:self.directory withIntermediateDirectories:YES attributes:nil error:nil];
-        [self loadCacheMap];
-        [self loadCacheMapOrder];
+        if (![fileManager fileExistsAtPath:self.directory isDirectory:NULL]){
+            [fileManager createDirectoryAtPath:self.directory withIntermediateDirectories:YES attributes:nil error:nil];
+        }
+        [self loadCacheStore];
     }
     
     return self;
@@ -72,11 +79,11 @@ static DiskDataCache *singleton = nil;
 - (NSData *)dataForKey:(NSString *)key
 {
     @synchronized(self) {
-        NSString *filename = [self.cacheMap objectForKey:key];
+        NSString *filename = [self.cachedMap objectForKey:key];
         if (!filename) return nil;
-
+        
         NSString *fullpath = [self filenameToPath:filename];
-
+        
         NSData *data = [NSData dataWithContentsOfFile:fullpath];
         return data;
     }
@@ -86,78 +93,76 @@ static DiskDataCache *singleton = nil;
 {
     @synchronized(self) {
         [self cleanUpCache];
-        NSFileManager *fileManager = [[NSFileManager alloc]init];
-        NSString *filename = [self.cacheMap objectForKey:key];
+        NSString *filename = [self.cachedMap objectForKey:key];
         
-        if (!filename) { // new file
-            NSDateFormatter *format = [[NSDateFormatter alloc] init];
-            [format setDateFormat:@"yy-MM-dd-HH-mm-ss-SSS"];            
-            filename = [format stringFromDate:[[NSDate alloc] init]];
-        } else { // existing file
-            
-            NSString *fullpath = [self filenameToPath:filename];
-            [fileManager removeItemAtPath:fullpath error:nil];
-        }
+        NSDateFormatter *format = [[NSDateFormatter alloc] init];
+        [format setDateFormat:@"yyyy.MM.dd.HH.mm.ss.SSS"];
+        filename = [format stringFromDate:[[NSDate alloc] init]];
+        NSLog(@"key hash %u", [key hash]);
         
-        NSString *fullpath = [self filenameToPath:filename];        
-        [data writeToFile:fullpath atomically:YES];
-        [self.cacheMap setObject:filename forKey:key];
-        [self saveCacheMap];
-        
-        [self.cacheMapOrder addObject:key];
-        [self saveCacheMapOrder];
+        self.currentCacheSize += [data length];
+        [data writeToFile:[self filenameToPath:filename] atomically:YES];
+        [self addDataToStoreWithKey:key andName:filename];
+        [self saveCacheStore];
     }
 }
 
-
-- (void)saveCacheMap
+- (void)clearCache
 {
-    NSString *fullpath = [self filenameToPath:@"cacheMap.plist"];
-    [self.cacheMap writeToFile:fullpath atomically:YES];
-    self.currentCacheCount = self.currentCacheCount + 1;
-}
-
-- (void)loadCacheMap
-{
-    NSString *filepath = [self filenameToPath:@"cacheMap.plist"];
-    self.cacheMap = [[NSDictionary dictionaryWithContentsOfFile:filepath] mutableCopy];
+    NSFileManager *fileManager = [[NSFileManager alloc]init];
     
-    if (!self.cacheMap) self.cacheMap = [[NSMutableDictionary alloc]init];
-}
-
-- (void)saveCacheMapOrder
-{
-    NSString *fullpath = [self filenameToPath:@"cacheMapOrder.plist"];
-    [self.cacheMapOrder writeToFile:fullpath atomically:YES];
-}
-
-- (void)loadCacheMapOrder
-{
-    NSString *fullpath = [self filenameToPath:@"cacheMapOrder.plist"];
-    self.cacheMapOrder = [[NSArray arrayWithContentsOfFile:fullpath] mutableCopy];
-    
-    if (!self.cacheMapOrder){
-        self.cacheMapOrder = [[NSMutableArray alloc]init];
+    for (NSInteger i = 0; i < self.cachedArray.count; i++) {
+        NSString *key = [self.cachedArray objectAtIndex:i];
+        NSString *filename = [self.cachedMap objectForKey:key];
+        NSString *fullpath = [self filenameToPath:filename];
+        [fileManager removeItemAtPath:fullpath error:nil];
     }
+    [self.cachedArray removeAllObjects];
+    [self.cachedMap removeAllObjects];
+    self.currentCacheSize = 0;
+    
+    [self saveCacheStore];
+}
+
+- (void)saveCacheStore
+{
+    [self.cachedMap writeToFile:[self filenameToPath:CacheMapStore] atomically:YES];
+    [self.cachedArray writeToFile:[self filenameToPath:CacheKeysStore] atomically:YES];
+}
+
+- (void)loadCacheStore
+{
+    self.cachedMap = [[NSDictionary dictionaryWithContentsOfFile:[self filenameToPath:CacheMapStore]] mutableCopy];
+    self.cachedArray = [[NSArray arrayWithContentsOfFile:[self filenameToPath:CacheKeysStore]] mutableCopy];
+    
+    if (!self.cachedArray) self.cachedArray = [[NSMutableArray alloc]init];
+    if (!self.cachedMap) self.cachedMap = [[NSMutableDictionary alloc]init];
 }
 
 - (void)cleanUpCache
 {
-    if (self.currentCacheCount >= self.maxCacheCount){
+    if (self.currentCacheSize >= self.maxCacheSize){
         
         NSFileManager *fileManager = [[NSFileManager alloc]init];
         
-        int reduceCacheBy = self.maxCacheCount / 3;
+        long cacheSizeBound = self.currentCacheSize * 2 / 3;
+        NSLog(@"recude to %ld", cacheSizeBound);
+        long cacheSize = self.currentCacheSize;
         
-        for (NSInteger i = 0; i < reduceCacheBy; i++) {
-            NSString *key = [self.cacheMapOrder objectAtIndex:i];
-            NSString *filename = [self.cacheMap objectForKey:key];
-            NSString *fullpath = [self filenameToPath:filename];
-            [self.cacheMap removeObjectForKey:key];
+        while (cacheSize > cacheSizeBound && self.cachedArray.count > 0) {
+            NSString *key = [self.cachedArray objectAtIndex:0];
+            NSString *fullpath = [self filenameToPath:[self.cachedMap objectForKey:key]];
+            
+            NSLog(@"delete file %@", [self.cachedMap objectForKey:key]);
+            
+            NSNumber *fileSize = [[fileManager attributesOfItemAtPath:fullpath error:nil] objectForKey:NSFileSize];
+            NSLog(@"file attr %@", [fileManager attributesOfItemAtPath:fullpath error:nil]);
+            cacheSize = cacheSize - [fileSize longLongValue];
+            [self removeDataFromStoreWithKey:key];
             [fileManager removeItemAtPath:fullpath error:nil];
         }
-        [self.cacheMapOrder removeObjectsInRange: (NSRange){0, reduceCacheBy}];
-        self.currentCacheCount = self.currentCacheCount - reduceCacheBy;
+        [self saveCacheStore];
+        self.currentCacheSize = cacheSize;
     }
 }
 
@@ -167,4 +172,15 @@ static DiskDataCache *singleton = nil;
     return fullpath;
 }
 
+- (void)addDataToStoreWithKey:(NSString *)key andName:(NSString *)filename
+{
+    [self.cachedMap setObject:filename forKey:key];
+    [self.cachedArray addObject:key];
+}
+
+- (void)removeDataFromStoreWithKey:(NSString *)key
+{
+    [self.cachedMap removeObjectForKey:key];
+    [self.cachedArray removeObjectIdenticalTo:key];
+}
 @end
