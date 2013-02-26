@@ -36,11 +36,12 @@
     
     while (count > 0) {
         NSString *key = [self randomStringWithLength:20];
-        NSString *value = [self randomStringWithLength:500];
-        
+        NSString *value = [self randomStringWithLength:500];        
         [blobs setObject:value forKey:key];
         count --;
     }
+    
+    self.statusLabel.text = @"start to store in cache";
     
     for (NSString *key in blobs) {
         dispatch_queue_t queue = dispatch_queue_create("key", NULL);
@@ -48,9 +49,9 @@
             NSString *value = [blobs objectForKey:key];
             NSData *data = [value dataUsingEncoding:NSUTF8StringEncoding];
             [self.cache setData:data forKey:key];
+            NSLog(@"cache for key %@", key);
         });
     }
-//    [self updateCacheStatus:nil];
 }
 - (IBAction)clearCache:(id)sender
 {
