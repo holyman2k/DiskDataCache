@@ -16,12 +16,18 @@
 
 + (id) globalInstant;
 
-- (void)setMaxCacheCount:(long)maxCacheCount;
+- (void)setMaxCacheSize:(long)maxCacheSize;
 
 - (NSData *)dataForKey:(NSString *)key;
 
 - (void)setData:(NSData *)data forKey:(NSString *)key;
 
 - (void)clearCache;
+
+- (long)currentCacheSize;
+
+- (int)currentCachedObjectCount;
+
+- (BOOL)validateCache;
 
 @end

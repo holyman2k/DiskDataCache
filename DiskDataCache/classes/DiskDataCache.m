@@ -7,13 +7,13 @@
 //
 
 #import "DiskDataCache.h"
+#import <CommonCrypto/CommonDigest.h>
 
 #define CurrentCacheSizeStore @"CurrentCacheSize.txt"
 #define CacheMapStore @"CacheMap.plist"
 #define CacheKeysStore @"CacheKeys.plist"
 
 @interface DiskDataCache()
-@property (nonatomic) long maxCacheCount;
 @property (nonatomic) long maxCacheSize;
 @property (nonatomic) long currentCacheSize;
 @property (strong, atomic) NSMutableDictionary *cachedMap;
@@ -25,7 +25,8 @@
 
 static DiskDataCache *singleton = nil;
 
-@synthesize maxCacheCount = _maxCacheCount;
+#pragma mark - accessors
+
 @synthesize maxCacheSize = _maxCacheSize;
 @synthesize currentCacheSize = _currentCacheSize;
 @synthesize cachedMap = _cachedMap;
@@ -48,6 +49,8 @@ static DiskDataCache *singleton = nil;
     }
     return _currentCacheSize;
 }
+
+#pragma mark - initalizer
 
 + (id) globalInstant
 {
@@ -76,6 +79,8 @@ static DiskDataCache *singleton = nil;
     return self;
 }
 
+#pragma mark - public api
+
 - (NSData *)dataForKey:(NSString *)key
 {
     @synchronized(self) {
@@ -93,13 +98,7 @@ static DiskDataCache *singleton = nil;
 {
     @synchronized(self) {
         [self cleanUpCache];
-        NSString *filename = [self.cachedMap objectForKey:key];
-        
-        NSDateFormatter *format = [[NSDateFormatter alloc] init];
-        [format setDateFormat:@"yyyy.MM.dd.HH.mm.ss.SSS"];
-        filename = [format stringFromDate:[[NSDate alloc] init]];
-        NSLog(@"key hash %u", [key hash]);
-        
+        NSString *filename = [self md5:key];        
         self.currentCacheSize += [data length];
         [data writeToFile:[self filenameToPath:filename] atomically:YES];
         [self addDataToStoreWithKey:key andName:filename];
@@ -122,6 +121,39 @@ static DiskDataCache *singleton = nil;
     self.currentCacheSize = 0;
     
     [self saveCacheStore];
+}
+
+- (int)currentCachedObjectCount
+{
+    return self.cachedArray.count;
+}
+
+- (BOOL)validateCache
+{
+    NSFileManager *fileManager = [[NSFileManager alloc]init];
+    for (NSString *key in self.cachedMap){
+        NSString *filename = [self.cachedMap objectForKey:key];
+        NSString *filepath = [self filenameToPath:filename];
+        if (![fileManager fileExistsAtPath:filepath]) {
+            NSLog(@"file missing key: %@, filename %@", key, filename);
+            return NO;
+        }
+    }
+    return YES;
+}
+
+#pragma mark - private methods
+
+- (NSString *)filenameToPath:(NSString *)filename {
+    
+    NSString *fullpath = [[self.directory stringByAppendingPathComponent:filename] stringByAppendingString:@".cache"];
+    return fullpath;
+}
+
+- (void)addDataToStoreWithKey:(NSString *)key andName:(NSString *)filename
+{
+    [self.cachedMap setObject:filename forKey:key];
+    [self.cachedArray addObject:key];
 }
 
 - (void)saveCacheStore
@@ -166,21 +198,25 @@ static DiskDataCache *singleton = nil;
     }
 }
 
-- (NSString *)filenameToPath:(NSString *)filename {
-    
-    NSString *fullpath = [[self.directory stringByAppendingPathComponent:filename] stringByAppendingString:@".cache"];
-    return fullpath;
-}
-
-- (void)addDataToStoreWithKey:(NSString *)key andName:(NSString *)filename
-{
-    [self.cachedMap setObject:filename forKey:key];
-    [self.cachedArray addObject:key];
-}
-
 - (void)removeDataFromStoreWithKey:(NSString *)key
 {
     [self.cachedMap removeObjectForKey:key];
     [self.cachedArray removeObjectIdenticalTo:key];
+}
+
+- (NSString *)md5:(NSString *)string
+{
+    const char *ptr = [string UTF8String];
+    unsigned char md5Buffer[CC_MD5_DIGEST_LENGTH];
+    
+    CC_MD5(ptr, strlen(ptr), md5Buffer);
+    NSMutableString *output = [NSMutableString stringWithCapacity:CC_MD5_DIGEST_LENGTH * 2 + 1];
+    [output appendString:@"a"];
+   
+    for (int i = 0; i < CC_MD5_DIGEST_LENGTH; i++) {
+        [output appendFormat:@"%02x",md5Buffer[i]];
+    }
+    
+    return output;
 }
 @end
