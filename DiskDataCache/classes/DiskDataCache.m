@@ -35,7 +35,6 @@ static DiskDataCache *singleton = nil;
 
 - (void)setCurrentCacheSize:(long)currentCacheSize
 {
-    NSLog(@"cache at %ld, max at %ld at %f%%", currentCacheSize, self.maxCacheSize, ((double)currentCacheSize/(double)self.maxCacheSize * 100));
     _currentCacheSize = currentCacheSize;
     NSString *size = [NSString stringWithFormat:@"%ld", currentCacheSize];
     [size writeToFile:[self filenameToPath:CurrentCacheSizeStore] atomically:YES encoding:NSUTF8StringEncoding error:nil];
