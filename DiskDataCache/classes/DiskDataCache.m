@@ -8,6 +8,7 @@
 
 #import "DiskDataCache.h"
 #import <CommonCrypto/CommonDigest.h>
+#import <dispatch/dispatch.h>
 
 #define CurrentCacheSizeStore @"CurrentCacheSize.txt"
 #define CacheMapStore @"CacheMap.plist"
@@ -99,27 +100,33 @@ static DiskDataCache *singleton = nil;
         [self cleanUpCache];
         NSString *filename = [self md5:key];        
         self.currentCacheSize += [data length];
-        [data writeToFile:[self filenameToPath:filename] atomically:YES];
-        [self addDataToStoreWithKey:key andName:filename];
-        [self saveCacheStore];
+        dispatch_queue_t queue = dispatch_queue_create("cache queue", NULL);
+        dispatch_async(queue, ^{            
+            [data writeToFile:[self filenameToPath:filename] atomically:YES];
+            [self addDataToStoreWithKey:key andName:filename];
+            [self saveCacheStore];
+        });
     }
 }
 
 - (void)clearCache
 {
-    NSFileManager *fileManager = [[NSFileManager alloc]init];
+    NSFileManager *fileManager = [[NSFileManager alloc]init];    
     
-    for (NSInteger i = 0; i < self.cachedArray.count; i++) {
-        NSString *key = [self.cachedArray objectAtIndex:i];
-        NSString *filename = [self.cachedMap objectForKey:key];
-        NSString *fullpath = [self filenameToPath:filename];
-        [fileManager removeItemAtPath:fullpath error:nil];
-    }
-    [self.cachedArray removeAllObjects];
-    [self.cachedMap removeAllObjects];
-    self.currentCacheSize = 0;
-    
-    [self saveCacheStore];
+    dispatch_queue_t queue = dispatch_queue_create("cache queue", NULL);
+    dispatch_async(queue, ^{        
+        for (NSInteger i = 0; i < self.cachedArray.count; i++) {
+            NSString *key = [self.cachedArray objectAtIndex:i];
+            NSString *filename = [self.cachedMap objectForKey:key];
+            NSString *fullpath = [self filenameToPath:filename];
+            [fileManager removeItemAtPath:fullpath error:nil];
+        }
+        [self.cachedArray removeAllObjects];
+        [self.cachedMap removeAllObjects];
+        self.currentCacheSize = 0;
+        
+        [self saveCacheStore];
+    });
 }
 
 - (int)currentCachedObjectCount
