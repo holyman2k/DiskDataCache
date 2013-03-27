@@ -11,23 +11,23 @@ Usage
 first create a DiskDataCache instance by using the singleton class, optionally you can set the max bytes can be store
 before older data gets removed.
 
-  DiskDataCache *diskDataCache = [DiskDataCache globalInstant]
+    DiskDataCache *diskDataCache = [DiskDataCache globalInstant]
 
-  [diskDataCache setMaxCacheSize];
+    [diskDataCache setMaxCacheSize];
 
 to add and get data from cache
   
-  [diskDataCache setData:data forKey:@"cache key"];  
+    [diskDataCache setData:data forKey:@"cache key"];  
 
-  NSData *data = [diskDataCache dataForKey:@"cache key"];
+    NSData *data = [diskDataCache dataForKey:@"cache key"];
 
 to clear cache
 
-  [diskDataCache clearCache];
+    [diskDataCache clearCache];
 
 some methods to get cache information
 
-  [diskDataCache currentCacheSize];
+    [diskDataCache currentCacheSize];
 
-  [diskDataCache currentCachedObjectCount];
+    [diskDataCache currentCachedObjectCount];
   
