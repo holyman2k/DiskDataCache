@@ -98,10 +98,10 @@ static DiskDataCache *singleton = nil;
 {
     @synchronized(self) {
         [self cleanUpCache];
-        NSString *filename = [self md5:key];        
-        self.currentCacheSize += [data length];
-        dispatch_queue_t queue = dispatch_queue_create("cache queue", NULL);
-        dispatch_async(queue, ^{            
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0) , ^{
+            if (!data || data.length == 0 || !key || key.length == 0) return;
+            NSString *filename = [self md5:key];
+            self.currentCacheSize += [data length];
             [data writeToFile:[self filenameToPath:filename] atomically:YES];
             [self addDataToStoreWithKey:key andName:filename];
             [self saveCacheStore];
